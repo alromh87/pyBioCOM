@@ -220,14 +220,7 @@ class Webcam():
     a = 3
     cv2.line(frame,(int(x),int(y)),(int(x),int(y-l)), (255,0,0),w)
     cv2.line(frame,(int(x),int(y)),(int(x+l),int(y)), (0,255,0),w)
-    cv2.fillPoly(frame,[(int(x+l-3),int(y+3)),(int(x+l),int(y)),(int(x+l-3),int(y-3))], (0,255,0))
-#    cv2.(frame,[(int(x),int(y)),(int(x+10),int(y+10))], (255,0,0),1)
-
-#    cv2.line(frame,(int(x),0),(int(x),int(y-1)), color,1)
-#    cv2.line(frame,(int(x),int(y+1)),(int(x),int(self.targetH)), color,1)
-#    cv2.line(frame,(0,int(y)),(int(x-1),int(y)),color,w)
-#    cv2.line(frame,(int(x+1),int(y)),(int(self.targetW),int(y)),color,w)
-    
+#    cv2.fillPoly(frame,[(int(x+l-3),int(y+3)),(int(x+l),int(y)),(int(x+l-3),int(y-3))], (0,255,0))
 
   def raya_vertical(self, frame, x, color = (0,0,0), w=1):
     cv2.line(frame,(int(x),0),(int(x),int(self.targetH)),color,w)
