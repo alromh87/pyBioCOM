@@ -8,6 +8,7 @@ import numpy as np
 import cv2
 
 import json
+import math
 
 reload(sys)
 sys.setdefaultencoding('utf-8')
@@ -61,6 +62,8 @@ class Webcam():
     self.MainWindow.b_muslo.clicked.connect(self.capturar_muslo)
     self.MainWindow.b_pantorrilla.clicked.connect(self.capturar_pantorrilla)
     self.MainWindow.b_pie.clicked.connect(self.capturar_pie)
+
+    self.MainWindow.b_torques.clicked.connect(self.calcular_torques)
 
     self.MainWindow.cb_posiciones.currentIndexChanged.connect(self.seleccionarPosicion)
     self.MainWindow.cbTablaDimensiones.currentIndexChanged.connect(self.mostrarDimensiones)
@@ -142,7 +145,7 @@ class Webcam():
     for segmento in cadena:
       if segmento == 'COM':
         continue
-      peso = self.dimensiones[i][segmento][1]  
+      peso = self.dimensiones[i][segmento][1] 
       com = cadena[segmento]['COM']
       x += com[0] * peso
       y += com[1] * peso
@@ -150,6 +153,52 @@ class Webcam():
     x = x / pesoT
     y = y / pesoT
     self.cadenas[indx]['COM'] = [int(x),int(y)]
+
+  def calcular_torques(self):
+    ta = self.MainWindow.cbTablaDimensiones.currentIndex() 
+    i=0
+    self.torques = []
+    for cadena in self.cadenas:
+      print '\n\n\n------------------------\nPostura %d:' %i
+      self.torques.append({});
+      com = cadena['COM']
+      torqueT = 0
+      for segmento in cadena:
+        if segmento == 'COM':
+          continue
+        com_segmento = cadena[segmento]['COM']
+
+        d = [com_segmento[0]-com[0], com[1]-com_segmento[1]] #Invertir y para coincidir con sistema de referencia
+        d = math.sqrt(math.pow(d[0],2)+math.pow(d[1],2))
+        t = self.dimensiones[ta][segmento][1] * math.pow(d,2)
+        x = self.ordenSegmentos.index(segmento)
+        if x >=2: #Si es pierna o brazo va doble
+          t =t*2
+        dir = 1
+        if com_segmento[0]-com[0]<0: dir = -1
+        self.torques[i][segmento] = {'distancia':d, 'torque':t, 'direccion': dir};
+        torqueT += t*dir
+        print segmento, t, torqueT
+#        print segmento,": ", d
+      self.torques[i]['total'] = torqueT
+      i+=1
+#    print self.torques
+    self.exportar_torques()
+
+  def exportar_torques(self):
+    header = ','
+    out = ''
+    for segmento in self.ordenSegmentos:
+      out += segmento.title()
+      for torque in self.torques:
+        out += ',%.2f,%.2f' % (torque[segmento]['distancia'], torque[segmento]['torque'])
+      else:
+        out += '\n'
+    out += 'Total'
+    for torque in self.torques:
+      out += ',,%.2f' % (torque['total'])
+    out += '\n'
+    print out
 
   def mouseTracker(self, obj, type, x, y):
     self.mouse_x = x
@@ -255,6 +304,7 @@ class Webcam():
       self.MainWindow.tablaDimensiones.setItem(x, 0, item)
       item = QtGui.QTableWidgetItem('%.3f'%valores[1])
       self.MainWindow.tablaDimensiones.setItem(x, 1, item)
+#      x = self.ordenSegmentos.index(llave)
 #      if x <2:
 #        suma += valores[1]
 #      else:
