@@ -86,7 +86,7 @@ class Webcam():
       self.posicion = i
       self.MainWindow.segmentos.setEnabled(True)
       self.MainWindow.cb_posiciones.setCurrentIndex(self.posicion);
-      self.redraw()
+      self.recalcularCOM()
 
   def anadirPos(self):
     self.posicion += 1
@@ -129,8 +129,19 @@ class Webcam():
     pixmap.convertFromImage(image.rgbSwapped())
     return pixmap
 
+  def recalcularCOM(self):
+    i=0
+    for cadena in self.cadenas:
+      for segmento in cadena:
+        if segmento == 'COM':
+          continue
+        self.cadenas[i][segmento]['COM'] = self.calcularCOMSegmento(segmento, cadena[segmento]['coordenadas']) 
+      self.calcularCOM(i)
+      i += 1
+    self.redraw()
+
   def calcularCOMSegmento(self, segmento, coordenadas):
-    i = self.MainWindow.cbTablaDimensiones.currentIndex() 
+    i = self.MainWindow.cbTablaDimensiones.currentIndex()
     escala = self.dimensiones[i][segmento][0]/100
     x = coordenadas[0][0]+escala*(coordenadas[1][0]-coordenadas[0][0])
     y = coordenadas[0][1]+escala*(coordenadas[1][1]-coordenadas[0][1])
@@ -146,6 +157,9 @@ class Webcam():
       if segmento == 'COM':
         continue
       peso = self.dimensiones[i][segmento][1] 
+      j = self.ordenSegmentos.index(segmento)
+      if j >=2: #Si es pierna o brazo va doble
+        peso *= 2
       com = cadena[segmento]['COM']
       x += com[0] * peso
       y += com[1] * peso
@@ -168,21 +182,18 @@ class Webcam():
           continue
         com_segmento = cadena[segmento]['COM']
 
-        d = [com_segmento[0]-com[0], com[1]-com_segmento[1]] #Invertir y para coincidir con sistema de referencia
-        d = math.sqrt(math.pow(d[0],2)+math.pow(d[1],2))
-        t = self.dimensiones[ta][segmento][1] * math.pow(d,2)
+#        d = [com_segmento[0]-com[0], com[1]-com_segmento[1]] #Invertir y para coincidir con sistema de referencia
+#        d = math.sqrt(math.pow(d[0],2)+math.pow(d[1],2))
+        d = com_segmento[0]-com[0]
+        t = self.dimensiones[ta][segmento][1] * 9.81 * d
         x = self.ordenSegmentos.index(segmento)
         if x >=2: #Si es pierna o brazo va doble
           t =t*2
-        dir = 1
-        if com_segmento[0]-com[0]<0: dir = -1
-        self.torques[i][segmento] = {'distancia':d, 'torque':t, 'direccion': dir};
-        torqueT += t*dir
-        print segmento, t, torqueT
-#        print segmento,": ", d
+        self.torques[i][segmento] = {'distancia':d, 'torque':t};
+        torqueT += t
+        print segmento, d, t," sum:", torqueT
       self.torques[i]['total'] = torqueT
       i+=1
-#    print self.torques
     self.exportar_torques()
 
   def exportar_torques(self):
@@ -213,6 +224,8 @@ class Webcam():
     self.redraw()
 
   def redraw(self):
+    if not hasattr(self, 'img'):
+      return
     capture = self.img.copy()
     i=0
     for cadena in self.cadenas:
@@ -304,6 +317,7 @@ class Webcam():
       self.MainWindow.tablaDimensiones.setItem(x, 0, item)
       item = QtGui.QTableWidgetItem('%.3f'%valores[1])
       self.MainWindow.tablaDimensiones.setItem(x, 1, item)
+    self.recalcularCOM()
 #      x = self.ordenSegmentos.index(llave)
 #      if x <2:
 #        suma += valores[1]
